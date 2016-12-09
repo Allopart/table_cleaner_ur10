@@ -1,0 +1,5 @@
+<launch>
+  <!-- <rosparam file="$(find ur10_moveit_config)/config/controllers.yaml"/> -->
+  <rosparam file="$(find ur_modern_driver)/config/ur10_controllers.yaml"/>
+  <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
+</launch>

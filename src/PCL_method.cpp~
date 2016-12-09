@@ -1,0 +1,217 @@
+#include <ros/ros.h>
+// PCL specific includes
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/conversions.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/console/parse.h>
+#include <pcl/common/transforms.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/sample_consensus/sac_model_normal_plane.h>
+#include <pcl/sample_consensus/sac_model_plane.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/features/integral_image_normal.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/surface/concave_hull.h>
+#include <pcl_ros/transforms.h>
+#include <pcl_ros/point_cloud.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include "std_msgs/MultiArrayLayout.h"
+#include "std_msgs/MultiArrayDimension.h"
+#include "std_msgs/Float32MultiArray.h"
+#include <iostream>
+
+using namespace cv;
+
+// Global calibration values from Kinect (depth)
+float fx_rgb = 524.8658126516821;
+float fy_rgb = 526.0833409797511;
+float cx_rgb = 312.2262287922412;
+float cy_rgb = 255.4394087221328;
+float fx_d = 595.1658098859201;
+float fy_d = 596.9074027626567;
+float cx_d = 310.6772546302307;
+float cy_d = 247.6954910343287;
+
+// PCL Visualizer to view the pointcloud
+// pcl::visualization::PCLVisualizer viewer ("Door handle PCL_method");
+
+
+class Converter
+{
+  ros::NodeHandle nh_;
+  image_transport::ImageTransport it_;
+  ros::Subscriber pcl_sub_bowl;
+  ros::Subscriber pcl_sub_dish;
+  ros::Subscriber pcl_sub_fork;
+  ros::Subscriber pcl_sub_glass;
+  ros::Subscriber pcl_sub_knife;
+  ros::Subscriber pcl_sub_spoon; 
+  ros::Publisher pcl_pub_bowl;
+  ros::Publisher pcl_pub_dish;
+  ros::Publisher pcl_pub_fork;
+  ros::Publisher pcl_pub_glass;
+  ros::Publisher pcl_pub_knife;
+  ros::Publisher pcl_pub_spoon;
+  ros::Publisher pcl_pub_table;
+  //ros::Publisher normal_pub_door;
+ 
+public:
+  Converter()
+    : it_(nh_)
+  {   
+    // Create a ROS subscriber for the input point cloud
+    pcl_sub_dish = nh_.subscribe ("cropped/dish_pcl", 1, &Converter::cloud_dish, this);
+    // Create a ROS publisher for the output point cloud
+    pcl_pub_bowl = nh_.advertise<sensor_msgs::PointCloud2> ("/door_detection/bowl_pcl", 1);
+    pcl_pub_dish = nh_.advertise<sensor_msgs::PointCloud2> ("/door_detection/dish", 1);
+    pcl_pub_fork = nh_.advertise<sensor_msgs::PointCloud2> ("/door_detection/fork", 1);
+    pcl_pub_glass = nh_.advertise<sensor_msgs::PointCloud2> ("/door_detection/glass", 1);
+    pcl_pub_knife = nh_.advertise<sensor_msgs::PointCloud2> ("/door_detection/knife", 1);
+    pcl_pub_spoon = nh_.advertise<sensor_msgs::PointCloud2> ("/door_detection/spoon", 1);
+    //normal_pub_door = nh_.advertise<std_msgs::Float32MultiArray> ("/door_detection/normal", 1);
+  }
+
+  
+  // ***********************************************************************
+
+
+  void 
+  cloud_dish (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
+  {
+    // Container for original & filtered data
+    pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2; 
+    pcl::PCLPointCloud2ConstPtr cloudPtr(cloud);
+    pcl::PCLPointCloud2 cloud_filtered;
+
+    // Convert to PCL data type
+    pcl_conversions::toPCL(*cloud_msg, *cloud);
+/*
+    // Perform the actual filtering (not used for now)
+    pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
+    sor.setInputCloud (cloudPtr);
+    sor.setLeafSize (0.1, 0.1, 0.1);
+    sor.filter (cloud_filtered);
+*/   
+/*    
+    // Convert to XYZRGB format (not used)
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::fromPCLPointCloud2(*cloudPtr, *cloud_rgb);
+*/
+
+    // Convert to XYZ format
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::fromPCLPointCloud2(*cloudPtr, *cloud_xyz);
+
+
+    // Crop points out of ROI
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cropped(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud (cloud_xyz);//cloud_rot
+    pass.setFilterFieldName ("y");
+    pass.setFilterLimits (-0.5, 0.5);
+    //pass.setFilterLimitsNegative (true);
+    pass.filter (*cloud_cropped);
+
+
+    // ************************** Planar segmentation *************************  
+
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
+    pcl::PCDWriter writer;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+    // Create the segmentation object
+    pcl::SACSegmentation<pcl::PointXYZ> seg;
+    // Optional
+    seg.setOptimizeCoefficients (true);
+    // Mandatory
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setMaxIterations (100);
+    seg.setDistanceThreshold (0.04);
+  
+    int i=0, nr_points = (int) cloud_cropped->points.size ();
+    while (cloud_cropped->points.size () > 0.3 * nr_points)
+    {
+      // Segment the largest planar component from the remaining cloud
+      seg.setInputCloud (cloud_cropped);
+      seg.segment (*inliers, *coefficients);
+      if (inliers->indices.size () == 0)
+      {
+        std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
+        break;
+      }
+
+      // Extract the planar inliers from the input cloud
+      pcl::ExtractIndices<pcl::PointXYZ> extract;
+      extract.setInputCloud (cloud_cropped);
+      extract.setIndices (inliers);
+      extract.setNegative (false);
+
+      // Get the points associated with the planar surface
+      extract.filter (*cloud_plane);
+    
+      // Remove the planar inliers, extract the rest
+      extract.setNegative (true);
+      extract.filter (*cloud_f);
+      *cloud_cropped = *cloud_f;
+    }
+
+
+   
+/*   
+    // Visualize pointcloud
+    viewer.addCoordinateSystem();
+    viewer.addPointCloud (cloud_f, "scene_cloud");
+    viewer.spinOnce();
+    viewer.removePointCloud("scene_cloud");
+*/
+
+    // Publish the outlier data (handle)
+    cloud_f->header.frame_id = "camera_rgb_optical_frame";
+    ros::Time time_st = ros::Time::now ();
+    cloud_f->header.stamp = time_st.toNSec()/1e3;
+    pcl_pub_handle.publish (cloud_f);
+
+    // Publish the inlier data (door)
+    cloud_plane->header.frame_id = "camera_rgb_optical_frame";
+    cloud_plane->header.stamp = time_st.toNSec()/1e3;
+    pcl_pub_door.publish (cloud_plane);
+
+    //Generate and publish normal data
+    std_msgs::Float32MultiArray normal;
+    normal.data.clear();
+    normal.data=coefficients->values;
+    normal_pub_door.publish(normal);
+
+  }    
+
+};
+
+int
+main (int argc, char** argv)
+{
+  // Initialize ROS
+  ros::init (argc, argv, "PCL_method");
+    
+  // Run code
+  Converter ic;
+
+  // Spin
+  ros::spin ();
+}

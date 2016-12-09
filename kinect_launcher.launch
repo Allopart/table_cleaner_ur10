@@ -1,0 +1,5 @@
+<launch>
+
+	<include file="$(find freenect_launch)/launch/freenect.launch"/>
+
+</launch>

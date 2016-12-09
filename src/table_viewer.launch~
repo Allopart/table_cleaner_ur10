@@ -1,0 +1,7 @@
+<launch>
+
+	<include file="$(find freenect_launch)/launch/freenect.launch"/>
+
+	<node name="rviz" pkg="rviz" type="rviz" args="-d /home/.rviz/table_viewer.rviz"/>
+
+</launch>

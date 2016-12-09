@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+
+## BEGIN_SUB_TUTORIAL imports
+##
+## To use the python interface to move_group, import the moveit_commander
+## module.  We also import rospy and some messages that we will use.
+import sys
+import copy
+import rospy
+import moveit_commander
+import moveit_msgs.msg
+import geometry_msgs.msg
+from geometry_msgs.msg import PoseStamped
+## END_SUB_TUTORIAL
+
+from std_msgs.msg import String
+
+def move_group_python_interface_tutorial():
+  ## BEGIN_TUTORIAL
+  ##
+  ## Setup
+  ## ^^^^^
+  ## CALL_SUB_TUTORIAL imports
+  ##
+  ## First initialize moveit_commander and rospy.
+  print "============ Starting tutorial setup"
+  moveit_commander.roscpp_initialize(sys.argv)
+  rospy.init_node('move_group_python_interface_tutorial',
+                  anonymous=True)
+
+  ## Instantiate a RobotCommander object.  This object is an interface to
+  ## the robot as a whole.
+  robot = moveit_commander.RobotCommander()
+
+  ## Instantiate a PlanningSceneInterface object.  This object is an interface
+  ## to the world surrounding the robot.
+  scene = moveit_commander.PlanningSceneInterface()
+
+  ## Instantiate a MoveGroupCommander object.  This object is an interface
+  ## to one group of joints.  In this case the group is the joints in the left
+  ## arm.  This interface can be used to plan and execute motions on the left
+  ## arm.
+  group = moveit_commander.MoveGroupCommander("my_ur10_limited")
+
+
+  ## We create this DisplayTrajectory publisher which is used below to publish
+  ## trajectories for RVIZ to visualize.
+  display_trajectory_publisher = rospy.Publisher(
+                                      '/move_group/display_planned_path',
+                                      moveit_msgs.msg.DisplayTrajectory)
+
+
+  ## Planning to a Pose goal
+  ## ^^^^^^^^^^^^^^^^^^^^^^^
+  ## We can plan a motion for this group to a desired pose for the 
+  ## end-effector
+  print "============ Plan 1"
+  pose_target = geometry_msgs.msg.PoseStamped()
+  pose_target.header.frame_id = "/world"
+  pose_target.pose.position.x =  0.6
+  pose_target.pose.position.y = 0.8
+  pose_target.pose.position.z = -0.30
+  pose_target.pose.orientation.x = -0.28
+  pose_target.pose.orientation.y = -0.59
+  pose_target.pose.orientation.z = -0.23
+  pose_target.pose.orientation.w = 0.72
+  group.set_pose_target(pose_target)
+  my_grasp_pub.publish(pose_target)
+  ## Now, we call the planner to compute the plan
+  ## and visualize it if successful
+  ## Note that we are just planning, not asking move_group 
+  ## to actually move the robot
+  plan1 = group.plan()
+
+  print "============ Waiting while RVIZ displays plan..."
+  rospy.sleep(2)
+
+
+  ## Moving to a pose goal
+  ## ^^^^^^^^^^^^^^^^^^^^^
+  ##
+  ## Moving to a pose goal is similar to the step above
+  ## except we now use the go() function. Note that
+  ## the pose goal we had set earlier is still active 
+  ## and so the robot will try to move to that goal. We will
+  ## not use that function in this tutorial since it is 
+  ## a blocking function and requires a controller to be active
+  ## and report success on execution of a trajectory.
+
+  # Uncomment below line when working with a real robot
+  #group.go(wait=True)
+
+  print "============ DONE"
+
+
+if __name__=='__main__':
+ # Publisher 
+  my_grasp_pub = rospy.Publisher('adrian', PoseStamped)
+  try:
+    move_group_python_interface_tutorial()
+  except rospy.ROSInterruptException:
+    pass
+
+
+

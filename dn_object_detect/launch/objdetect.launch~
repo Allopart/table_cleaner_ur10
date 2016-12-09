@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="dn_object_detect" type="dn_object_detect" name="dn_object_detect" output="screen">
+    <param name="camera" type="str" value="/camera/rgb/image_rect_color"/>
+    <param name="_image_transport" type="str" value="compressed"/>
+    <param name="yolo_config" type="str" value="/home/adllo/catkin_ws/src/dn_object_detect/darknet/table_cleaner/cfg/tiny-yolo_table_cleaner.cfg"/>
+    <param name="yolo_model" type="str" value="/home/adllo/catkin_ws/src/dn_object_detect/darknet/weights/yolo-small-2_final.weights"/>
+    <param name="threshold" type="double" value="0.1"/>
+  </node>
+</launch>

@@ -1,0 +1,1 @@
+System that recognizes cutlery and dishes from a kinects video stream using CNNs (YOLO framewrok). It the generates the objects pointcloud and obtains suitable grasping positions. Finally it uses a UR10 robot arm to plan and move to the desired grasping locations.

@@ -1,0 +1,22 @@
+digraph G {
+"base_link" -> "base"[label="Broadcaster: /robot_state_publisher\nAverage rate: 50.198 Hz\nMost recent transform: 1479295931.956 ( -0.481 sec old)\nBuffer length: 4.960 sec\n"];
+"world" -> "base_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 50.198 Hz\nMost recent transform: 1479295931.956 ( -0.481 sec old)\nBuffer length: 4.960 sec\n"];
+"wrist_3_link" -> "ee_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 50.198 Hz\nMost recent transform: 1479295931.956 ( -0.481 sec old)\nBuffer length: 4.960 sec\n"];
+"wrist_3_link" -> "tool0"[label="Broadcaster: /robot_state_publisher\nAverage rate: 50.198 Hz\nMost recent transform: 1479295931.956 ( -0.481 sec old)\nBuffer length: 4.960 sec\n"];
+"camera_link" -> "camera_rgb_frame"[label="Broadcaster: /camera_base_link1\nAverage rate: 10.195 Hz\nMost recent transform: 1479295931.488 ( -0.013 sec old)\nBuffer length: 4.806 sec\n"];
+"camera_depth_frame" -> "camera_depth_optical_frame"[label="Broadcaster: /camera_base_link2\nAverage rate: 10.197 Hz\nMost recent transform: 1479295931.491 ( -0.016 sec old)\nBuffer length: 4.805 sec\n"];
+"camera_link" -> "camera_depth_frame"[label="Broadcaster: /camera_base_link\nAverage rate: 10.191 Hz\nMost recent transform: 1479295931.558 ( -0.083 sec old)\nBuffer length: 4.906 sec\n"];
+"camera_rgb_frame" -> "camera_rgb_optical_frame"[label="Broadcaster: /camera_base_link3\nAverage rate: 10.198 Hz\nMost recent transform: 1479295931.492 ( -0.018 sec old)\nBuffer length: 4.805 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1479295931.475"[ shape=plaintext ] ;
+ }->"wrist_3_link";
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1479295931.475"[ shape=plaintext ] ;
+ }->"world";
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1479295931.475"[ shape=plaintext ] ;
+ }->"camera_link";
+}

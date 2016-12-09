@@ -1,0 +1,82 @@
+<launch>
+
+	<!--
+	<include file="$(find freenect_launch)/launch/freenect.launch"/>
+	-->
+
+	<!--
+	<include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch"/>
+	-->
+
+	<!--
+	<node name="dynparam" pkg="dynamic_reconfigure" type="dynparam" args="set /camera/driver depth_registration True"> </node>
+	<node name="dynparam1" pkg="dynamic_reconfigure" type="dynparam" args="set /camera/driver image_mode 2"> </node>
+	<node name="dynparam2" pkg="dynamic_reconfigure" type="dynparam" args="set /camera/driver depth_mode 2"> </node>	
+	-->
+
+        <arg name="odom_frame_id"   default="odom"/>
+        <arg name="base_frame_id"   default="base_link"/>
+        <arg name="global_frame_id" default="world"/>
+
+
+	<arg name="gui" default="true" />
+	<param name="use_gui" value="$(arg gui)"/>
+	
+	<!-- Load robot model -->
+	<include file="$(find ur_modern_driver)/launch/ur10_bringup.launch">
+	<arg name="robot_ip" default="192.38.66.226" />
+	<arg name="limited" default="false" />
+	</include> 
+
+  	<include file="$(find my_ur10_limited)/launch/move_group.launch"/> 
+
+	<!-- Environment collision -->
+	<node name="environment" pkg="table_cleaner" type="environment"/>
+ 	<node name="movable_obstacles" pkg="table_cleaner" type="movable_obstacles"/>
+	
+	
+        <!-- Object detection -->
+	<node pkg="dn_object_detect" type="dn_object_detect" name="dn_object_detect" output="screen">
+    	<param name="camera" type="str" value="/camera/rgb/image_rect_color"/>
+    	<param name="_image_transport" type="str" value="compressed"/>
+    	<param name="yolo_config" type="str" value="/home/adllo/catkin_ws/src/dn_object_detect/darknet/table_cleaner/cfg/tiny-yolo_table_cleaner.cfg"/>
+    	<param name="yolo_model" type="str" value="/home/adllo/catkin_ws/src/dn_object_detect/darknet/table_cleaner/weights/tiny-yolo_37000.weights"/>
+         </node>
+         
+  
+	<!-- Pointcloud extraction -->
+	<node name="dish_pcl_seg" pkg="table_cleaner" type="dish_pcl_seg"/>
+        <node name="dish_vis_seg" pkg="table_cleaner" type="dish_vis_seg" respawn="true"/>
+        <node name="dish_fusion" pkg="table_cleaner" type="dish_fusion"/>
+	<include file="$(find agile_grasp)/launch/dish_grasp.launch"/>
+        
+        <node name="fork_pcl_seg" pkg="table_cleaner" type="fork_pcl_seg"/>
+        <node name="fork_vis_seg" pkg="table_cleaner" type="fork_vis_seg" respawn="true"/>
+        <node name="fork_fusion" pkg="table_cleaner" type="fork_fusion"/>
+	<include file="$(find agile_grasp)/launch/fork_grasp.launch"/>
+
+        <node name="glass_pcl_seg" pkg="table_cleaner" type="glass_pcl_seg"/>
+        <node name="glass_vis_seg" pkg="table_cleaner" type="glass_vis_seg" respawn="true"/>
+        <node name="glass_fusion" pkg="table_cleaner" type="glass_fusion"/>
+	<include file="$(find agile_grasp)/launch/glass_grasp.launch"/>
+
+        <node name="knife_pcl_seg" pkg="table_cleaner" type="knife_pcl_seg"/>
+        <node name="knife_vis_seg" pkg="table_cleaner" type="knife_vis_seg" respawn="true"/>
+        <node name="knife_fusion" pkg="table_cleaner" type="knife_fusion"/>
+	<include file="$(find agile_grasp)/launch/knife_grasp.launch"/>
+
+        <node name="spoon_pcl_seg" pkg="table_cleaner" type="spoon_pcl_seg"/>
+        <node name="spoon_vis_seg" pkg="table_cleaner" type="spoon_vis_seg" respawn="true"/>
+        <node name="spoon_fusion" pkg="table_cleaner" type="spoon_fusion"/>
+	<include file="$(find agile_grasp)/launch/spoon_grasp.launch"/>
+  
+	<!-- Get grasp quaternions and plan/move -->
+	<node name="interface" pkg="table_cleaner" type="interface.py" respawn="true"/> 
+	
+        
+	<node name="rviz" pkg="rviz" type="rviz" args="-d /home/adllo/catkin_ws/src/table_cleaner/src/rviz/table_viewer.rviz"/> 
+	
+        
+   
+
+</launch>
