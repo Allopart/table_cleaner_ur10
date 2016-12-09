@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="ur5" >
+
+  <!-- common stuff -->
+  <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" />
+
+  <!-- ur5 -->
+  <xacro:include filename="$(find ur_description)/urdf/ur5.urdf.xacro" />
+
+  <!-- arm -->
+  <xacro:ur5_robot prefix="" joint_limited="false"/>
+
+  <!-- Robotiq gripper  --> 
+  <xacro:include filename="$(find robotiq_c2_model_visualization)/urdf/robotiq_c2_model.xacro" />
+
+ 
+  <link name="world" />
+  <link name="camera_link" />
+  <link name="my_eef" />
+
+  <joint name="world_joint" type="fixed">
+    <parent link="world" />
+    <child link = "base_link" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="world" />
+    <child link = "camera_link" />
+    <origin xyz="0.4 0 -0.3" rpy="0.0 0.95 1.57" />
+  </joint>
+
+
+  <joint name="tool_2_adapter_link" type="fixed">
+   <parent link="tool0" />
+   <child link="robotiq_85_adapter_link" />
+   <origin xyz="0.0 0.0 0.0" rpy="0.0 ${- pi / 2} 0.0" />
+  </joint>
+
+
+   <joint name="base_link_2_eef" type="fixed">
+   <parent link="robotiq_85_base_link" />
+   <child link="my_eef" />
+   <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+
+</robot>

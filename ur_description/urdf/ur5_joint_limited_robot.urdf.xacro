@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="ur5" >
+
+  <!-- common stuff -->
+  <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" />
+
+  <!-- ur5 -->
+  <xacro:include filename="$(find ur_description)/urdf/ur5.urdf.xacro" />
+
+  <!-- arm -->
+  <xacro:ur5_robot prefix="" joint_limited="true"/>
+
+  <!-- robotiq -->
+  <xacro:include filename="$(find robotiq_c2_model_visualization)/urdf/robotiq_c2_model.xacro" />
+
+  <!-- iRobot -->
+  <xacro:include filename="$(find iRobot)/iRobot_basic.urdf" />
+
+  <joint name="my_ur5_base_2_irobot_base_link" type="fixed">
+    <parent link="irobot_base_lin" />
+    <child link = "my_ur5_base_link" />
+    <origin xyz="0.2 0.2 0.4" rpy="0.0 0.0 0.0" />
+  </joint>
+
+  <link name="my_eef" />
+
+  <joint name="tool_2_adapter_link" type="fixed">
+   <parent link="tool0" />
+   <child link="robotiq_85_adapter_link" />
+   <origin xyz="0.0 0.0 0.0" rpy="0.0 -1.57 0.0" />
+  </joint>
+ 
+  <joint name="base_link_2_eef" type="fixed">
+    <parent link="tool0" />
+    <child link = "my_eef" />
+    <origin xyz="0.0 0.0 0.14" rpy="0.0 -1.57 1.57" /> 
+	<!-- rpy modified to make grasping approach correct -->
+  </joint>
+
+</robot>
